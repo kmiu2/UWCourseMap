@@ -67,7 +67,7 @@ def scrapeCourses(url):
 
 def courseMap():
     templateURL = "https://ucalendar.uwaterloo.ca/2122/COURSE/course-{}.html"
-    programString = "NE BME ECE SYDE CHE AE CIVE ENVE GEOE ME MTE MSCI CS SE PHYS CHEM MATH"
+    programString = "NE BME ECE SYDE CHE AE CIVE ENVE GEOE ME MTE MSCI CS SE PHYS CHEM MATH STAT"
     programs = programString.split(' ')
     data = []
 

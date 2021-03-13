@@ -1,2 +1,2 @@
 # UWCourseMap
-(https://ver7ici.github.io/UWCourseMap "Display Page")
+[Display Page](https://ver7ici.github.io/UWCourseMap)

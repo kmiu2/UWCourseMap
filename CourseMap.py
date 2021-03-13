@@ -90,30 +90,65 @@ def writeCSV(file, source, header):
 def generateHTML(source, header):
 
     html = "<html>"
-    html += (
-        "<head><style>"
-        "body {color: white; background-color: black;}"
-        "th {position: sticky; top: 0; background: #30003b;}"
-        "td {vertical-align: top;}"
-        "</style></head>"
-    )
-    
-    
+    html += """
+        <head><style>
+        body {color: white; background-color: black;}
+        th {
+            position: sticky;
+            top: 0;
+            background: #30003b;
+            padding: 7px;
+        }
+        #topBtn {
+            display: none;
+            position: fixed;
+            bottom: 7px;
+            right: 15px;
+            z-index: 99;
+            font-size: 18px;
+            border: none;
+            outline: none;
+            background-color: blue;
+            color: white;
+            cursor: pointer;
+            padding: 7px;
+            border-radius: 49px;
+        }
+        #topBtn:hover {background-color: #555;}
+        </style></head>
+    """
+    html += "<body>"
+    html += """
+        <button onclick="toTop()" id="topBtn" title="Go to top">Top</button>
+        <script>
+        var btn = document.getElementById("topBtn");
+        window.onscroll = function() {showOnScroll()};
+        function showOnScroll() {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                btn.style.display = "block";
+            } else {
+                btn.style.display = "none";
+            }
+        }
+        function toTop() {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        }
+        </script>
+    """
     html += "<table><tbody>"
-    html += "<tr class='header'>"
+    html += "<tr>"
     for h in header:
         html += "<th>%s</th>" % h
     html += "</tr>"
     
     for course in source:
+        html += "<tr><td><a id='{}'><br /></a></td></tr>".format(course['code'].lower())
         html += "<tr>"
         for h in header:
-            if h == 'code':
-                html += "<td><a id='{}'>{}</a></td>".format(course['code'].lower(), course['code'])
-            else:
-                html += "<td>%s</td>" % course[h]
+            html += "<td>%s</td>" % course[h]
         html += "</tr>"
-        
+
     html += "</tbody></table>"
     
     html +="</body></html>"
@@ -135,7 +170,7 @@ def main():
 #    printJSON(data)
     fieldnames = ('code', 'title', 'prereq', 'antireq', 'term', 'ID', 'description')
 #    writeCSV('courseMap.csv', data, fieldnames)
-    with open('index.php', 'w') as f:
+    with open('index.html', 'w') as f:
         f.write(generateHTML(data, fieldnames))
     
 # -------------------------------------------------

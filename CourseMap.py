@@ -170,7 +170,7 @@ def main():
 #    printJSON(data)
     fieldnames = ('code', 'title', 'prereq', 'antireq', 'term', 'ID', 'description')
 #    writeCSV('courseMap.csv', data, fieldnames)
-    with open('index.html', 'w') as f:
+    with open('index.html', 'w', encoding='utf-8') as f:
         f.write(generateHTML(data, fieldnames))
     
 # -------------------------------------------------

@@ -13,6 +13,7 @@ import xml.dom.minidom
 import re
 import json
 import csv
+import os
 
 
 def printXML(XMLString):
@@ -27,7 +28,7 @@ def printJSON(obj):
 def scrapeCourses(url):
     courses = list()
     r = request.urlopen(url)
-    print(r.status)
+    print(r.status, url)
     doc = parse(r)
 #    printXML(etree.tostring(doc))
     for i in doc.iterfind(".//center/div[@class='divTable']"):
@@ -41,7 +42,11 @@ def scrapeCourses(url):
             'description': ''
         }
         
-        course['code'] = i.find(".//div[@class='divTableCell']/strong/a[@name]").attrib['name']
+        course['code'] = re.sub(
+            "^([A-Z]+)([A-Z0-9]+)",
+            "\\1 \\2",
+            i.find(".//div[@class='divTableCell']/strong/a[@name]").attrib['name']
+        )
 
         course['ID'] = i.find(".//div[@class='divTableCell crseid']").text.split(' ')[-1]
 
@@ -67,12 +72,11 @@ def scrapeCourses(url):
 
 def courseMap():
     templateURL = "https://ucalendar.uwaterloo.ca/2122/COURSE/course-{}.html"
-    programString = "NE BME ECE SYDE CHE AE CIVE ENVE GEOE ME MTE MSCI CS SE PHYS CHEM MATH STAT"
+    programString = "NE BME ECE SYDE CHE AE CIVE ENVE GENE GEOE ME MTE MSCI CS SE PHYS CHEM MATH STAT"
     programs = programString.split(' ')
     data = []
 
     for p in programs:
-        print(p)
         data += scrapeCourses(templateURL.format(p))
     
     return data
@@ -84,6 +88,7 @@ def writeCSV(file, source, header):
         writer = csv.DictWriter(f, fieldnames=header)
         writer.writeheader()
         writer.writerows(source)
+    print("wrote to file: %s" % os.path.abspath(file))
 
 # -------------------------------------------------
 
@@ -97,8 +102,15 @@ def generateHTML(source, header):
             position: sticky;
             top: 0;
             background: #30003b;
-            padding: 7px;
         }
+        .code {white-space: nowrap;}
+        a {
+            color: HotPink;
+            font-weight: 777;
+            background-color: transparent;
+            text-decoration: none;
+        }
+        a:hover {color: Gold;}
         #topBtn {
             display: none;
             position: fixed;
@@ -139,28 +151,31 @@ def generateHTML(source, header):
     html += "<table><tbody>"
     html += "<tr>"
     for h in header:
-        html += "<th>%s</th>" % h
+        html += "<th class='%s'>%s</th>" % (h, h)
     html += "</tr>"
     
     for course in source:
-        html += "<tr><td><a id='{}'><br /></a></td></tr>".format(course['code'].lower())
+        html += "<tr><td><a id='{}'><br /></a></td></tr>".format(course['code'].replace(' ', '').lower())
         html += "<tr>"
         for h in header:
-            html += "<td>%s</td>" % course[h]
+            html += "<td class='%s'>%s</td>" % (h, course[h])
         html += "</tr>"
+        print('.', end='')
+    print()
 
     html += "</tbody></table>"
     
     html +="</body></html>"
     
     for code in [d['code'] for d in source]:
-        program, number = re.findall("^([A-Z]+)([A-Z0-9]+)", code, flags=re.M)[0]
         html = re.sub(
-            "({}[^A-Z]* )({})".format(program, number), 
-            "\\1<a href='#{}\'>\\2</a>".format(code.lower()),
+            "(\\b{}\\b[^A-Z]*(?: |\/))(\\b{}\\b)".format(*code.split(' ')), 
+            "\\1<a href='#{}\'>\\2</a>".format(code.replace(' ', '').lower()),
             html
         )
-            
+        print('.', end='')
+    print()
+    
     return html
 
 # -------------------------------------------------
@@ -169,9 +184,10 @@ def main():
     data = courseMap()
 #    printJSON(data)
     fieldnames = ('code', 'title', 'prereq', 'antireq', 'term', 'ID', 'description')
-#    writeCSV('courseMap.csv', data, fieldnames)
+    writeCSV('courseMap.csv', data, fieldnames)
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(generateHTML(data, fieldnames))
+    print("wrote to file: %s" % os.path.abspath('index.html'))
     
 # -------------------------------------------------
 

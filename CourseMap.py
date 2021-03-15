@@ -8,29 +8,34 @@ Created on Tue Mar  9 22:24:45 2021
 from urllib import request
 from bs4 import BeautifulSoup
 from lxml.html import parse
-from lxml import etree
-import xml.dom.minidom
 import re
-import json
 import csv
 import os
 
+# =================================================
 
-def printXML(XMLString):
-    dom = xml.dom.minidom.parseString(XMLString)
-    print(dom.toprettyxml())
-
-def printJSON(obj):
-    print(json.dumps(obj, indent=4, sort_keys=True))
+class CurrentTest:
+    def __init__(self):
+        templateURL = "https://ucalendar.uwaterloo.ca/2122/COURSE/course-{}.html"
+        programString = "NE BME ECE SYDE CHE AE CIVE ENVE GENE GEOE ME MTE MSCI CS SE PHYS CHEM MATH STAT"
+        self.urls = [templateURL.format(p) for p in programString.split(' ')]
+        self.headers = ('code', 'title', 'prereq', 'antireq', 'term', 'ID', 'description')
     
-# -------------------------------------------------
+    def instructions(self):
+        print((
+            "1. Get data: data = courseMap(*urls)\n"
+            "2. Save data: writeCSV(file, source, headers\n"
+            "3. Load saved data: data = parseCSV(file)\n"
+            "4. Create HTML: generateHTML(source, headers)"
+        ))
+
+# =================================================
 
 def scrapeCourses(url):
     courses = list()
     r = request.urlopen(url)
     print(r.status, url)
     doc = parse(r)
-#    printXML(etree.tostring(doc))
     for i in doc.iterfind(".//center/div[@class='divTable']"):
         course = {
             'code': '',
@@ -70,14 +75,11 @@ def scrapeCourses(url):
 
 # -------------------------------------------------
 
-def courseMap():
-    templateURL = "https://ucalendar.uwaterloo.ca/2122/COURSE/course-{}.html"
-    programString = "NE BME ECE SYDE CHE AE CIVE ENVE GENE GEOE ME MTE MSCI CS SE PHYS CHEM MATH STAT"
-    programs = programString.split(' ')
+def courseMap(*urls):
     data = []
 
-    for p in programs:
-        data += scrapeCourses(templateURL.format(p))
+    for url in urls:
+        data += scrapeCourses(url)
     
     return data
             
@@ -92,10 +94,17 @@ def writeCSV(file, source, header):
 
 # -------------------------------------------------
 
+def parseCSV(file):
+    with open(file, 'r') as f:
+        reader = csv.DictReader(f)
+        return list(reader)
+
+# -------------------------------------------------
+
 def generateHTML(source, header):
 
-    html = "<html>"
-    html += """
+    HTML = "<html>"
+    HTML += """
         <head><style>
         body {color: white; background-color: black;}
         th {
@@ -129,8 +138,8 @@ def generateHTML(source, header):
         #topBtn:hover {background-color: #555;}
         </style></head>
     """
-    html += "<body>"
-    html += """
+    HTML += "<body>"
+    HTML += """
         <button onclick="toTop()" id="topBtn" title="Go to top">Top</button>
         <script>
         var btn = document.getElementById("topBtn");
@@ -148,47 +157,47 @@ def generateHTML(source, header):
         }
         </script>
     """
-    html += "<table><tbody>"
-    html += "<tr>"
+    HTML += "<table><tbody>"
+    HTML += "<tr>"
     for h in header:
-        html += "<th class='%s'>%s</th>" % (h, h)
-    html += "</tr>"
+        HTML += "<th class='%s'>%s</th>" % (h, h)
+    HTML += "</tr>"
     
     for course in source:
-        html += "<tr><td><a id='{}'><br /></a></td></tr>".format(course['code'].replace(' ', '').lower())
-        html += "<tr>"
+        HTML += "<tr><td><a id='{}'><br /></a></td></tr>".format(course['code'].replace(' ', '').lower())
+        HTML += "<tr>"
         for h in header:
-            html += "<td class='%s'>%s</td>" % (h, course[h])
-        html += "</tr>"
-        print('.', end='')
-    print()
+            HTML += "<td class='%s'>%s</td>" % (h, course[h])
+        HTML += "</tr>"
 
-    html += "</tbody></table>"
-    
-    html +="</body></html>"
+    HTML += "</tbody></table>"
+    HTML +="</body></html>"
     
     for code in [d['code'] for d in source]:
-        html = re.sub(
-            "(\\b{}\\b[^A-Z]*(?: |\/))(\\b{}\\b)".format(*code.split(' ')), 
-            "\\1<a href='#{}\'>\\2</a>".format(code.replace(' ', '').lower()),
-            html
+        HTML = re.sub(
+            r"(\b{}\b(?:\W*(?:<a href='#\w{{5,8}}'>)?\d{{3}}[A-Z]?(?:<\/a>)?\W*)*(?: |\/))(\b{}\b)".format(*code.split(' ')), 
+            r"\1<a href='#{}'>\2</a>".format(code.replace(' ', '').lower()),
+            HTML
         )
-        print('.', end='')
-    print()
     
-    return html
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(BeautifulSoup(HTML, features='lxml').prettify())
+        print("wrote to file: %s" % os.path.abspath('index.html'))
 
 # -------------------------------------------------
 
 def main():
-    data = courseMap()
-#    printJSON(data)
-    fieldnames = ('code', 'title', 'prereq', 'antireq', 'term', 'ID', 'description')
-    writeCSV('courseMap.csv', data, fieldnames)
-    with open('index.html', 'w', encoding='utf-8') as f:
-        f.write(generateHTML(data, fieldnames))
-    print("wrote to file: %s" % os.path.abspath('index.html'))
+    test = CurrentTest()
+    try:
+        data = parseCSV("CourseMap.csv")
+        print("using file: %s" % os.path.abspath("CourseMap.csv"))
+    except FileNotFoundError:
+        print("CourseMap.csv not found, scraping web")
+        data = courseMap(*test.urls)
+        writeCSV('CourseMap.csv', data, test.headers)
+    generateHTML(data, test.headers)
     
 # -------------------------------------------------
 
-main()
+if __name__ == "__main__":
+    main()
